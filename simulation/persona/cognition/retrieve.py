@@ -166,7 +166,7 @@ class RetrieveComponent(Component):
 
     def retrieve(
         self, focal_points: list[str], top_k: int
-    ) -> list[tuple[datetime, str]]:
+    ) -> list[tuple[datetime, str, str, bool]]:
         res = self._retrieve_dict(focal_points, top_k)
         res = res.values()
         res = [node for nodes in res for node in nodes]
@@ -174,7 +174,10 @@ class RetrieveComponent(Component):
         # make sure we don't return the same node twice
         res = set(res)
         res = list(res)
-        res_sort = [(node.created, node.description) for node in res]
+        res_sort = [
+            (node.created, node.description, node.type.name, node.always_include)
+            for node in res
+        ]
         # sort by time, most recent last
         res_sort = sorted(res_sort, key=lambda x: x[0])
         return res_sort

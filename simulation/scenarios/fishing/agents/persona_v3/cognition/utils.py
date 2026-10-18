@@ -47,29 +47,44 @@ def consider_identity_persona_prompt(identity: PersonaIdentity) -> str:
 
 from datetime import datetime
 
+# When on, each memory line is prefixed with its node type and always_include
+# flag, e.g. "[event, always]" or "[thought]" (debug / prompt-anatomy only).
+MEMORY_TAGS = False
+
+
+def set_memory_tags(enabled: bool) -> None:
+    global MEMORY_TAGS
+    MEMORY_TAGS = enabled
+
+
+def _memory_tag(s) -> str:
+    if not MEMORY_TAGS or len(s) < 4:
+        return ""
+    return f"[{s[2].lower()}{', always' if s[3] else ''}] "
+
 
 def memory_prompt(
-    identity: PersonaIdentity, memories: list[tuple[datetime, str]]
+    identity: PersonaIdentity, memories: list[tuple[datetime, str, str, bool]]
 ) -> str:
     """
     f"Key memories of {identity.name}:\n{list_to_string_with_dash(memories)}\n"
     """
     res = ""
     for s in memories:
-        res += f"- {s[0].strftime('%Y-%m-%d')}: {s[1]}\n"
+        res += f"- {s[0].strftime('%Y-%m-%d')}: {_memory_tag(s)}{s[1]}\n"
 
     return f"Key memories of {identity.name} (format: YYYY-MM-DD: memory):\n{res}\n"
 
 
 def numbered_memory_prompt(
-    identity: PersonaIdentity, memories: list[tuple[datetime, str]]
+    identity: PersonaIdentity, memories: list[tuple[datetime, str, str, bool]]
 ) -> str:
     """
     f"Key memories of {identity.name}:\n{list_to_string_with_dash(memories)}\n"
     """
     res = ""
     for i, s in enumerate(memories):
-        res += f"{i+1}) {s[0].strftime('%Y-%m-%d')}: {s[1]}\n"
+        res += f"{i+1}) {s[0].strftime('%Y-%m-%d')}: {_memory_tag(s)}{s[1]}\n"
 
     return f"Key memories of {identity.name} (format: YYYY-MM-DD: memory):\n{res}\n"
 

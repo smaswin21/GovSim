@@ -16,6 +16,7 @@ from pathfinder import get_model
 from simulation.utils import ModelWandbWrapper, WandbLogger
 
 from .persona import EmbeddingModel
+from .scenarios.fishing.agents.persona_v3.cognition.utils import set_memory_tags
 from .scenarios.fishing.run import run as run_scenario_fishing
 from .scenarios.pollution.run import run as run_scenario_pollution
 from .scenarios.sheep.run import run as run_scenario_sheep
@@ -25,6 +26,7 @@ from .scenarios.sheep.run import run as run_scenario_sheep
 def main(cfg: DictConfig):
     print(OmegaConf.to_yaml(cfg))
     set_seed(cfg.seed)
+    set_memory_tags(bool(cfg.get("debug_memory_tags", False)))
 
     logger = WandbLogger(cfg.experiment.name, OmegaConf.to_object(cfg), debug=cfg.debug)
     experiment_storage = os.path.join(
@@ -152,6 +154,9 @@ def main(cfg: DictConfig):
         raise ValueError(f"Unknown experiment.scenario: {cfg.experiment.scenario}")
 
     os.makedirs(experiment_storage, exist_ok=True)
+    # every prompt/response rendered as HTML, per agent (chain name in <h3>)
+    with open(os.path.join(experiment_storage, "prompts.json"), "w") as f:
+        json.dump(logger.html_logs, f)
     with open(os.path.join(experiment_storage, "usage.json"), "w") as f:
         json.dump(
             {
