@@ -1,0 +1,17 @@
+diff --git a/pathfinder/api.py b/pathfinder/api.py
+index f5c849a..5671278 100644
+--- a/pathfinder/api.py
++++ b/pathfinder/api.py
+@@ -407,8 +407,9 @@ class AnthropicAPI(ModelAPI):
+         out = completions_with_backoff(
+             model=self.model_name,
+             messages=chat,
+-            temperature=tmeperature,
+-            top_p=top_p,
+             max_tokens=max_tokens,
++            thinking={"type": "disabled"},
+         )
+-        return out.content[0].text
++        self.token_in = out.usage.input_tokens
++        self.token_out = out.usage.output_tokens
++        return "".join(b.text for b in out.content if b.type == "text")

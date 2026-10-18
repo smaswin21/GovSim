@@ -1,5 +1,7 @@
+import json
 import os
 import shutil
+import time
 import uuid
 
 import hydra
@@ -117,6 +119,7 @@ def main(cfg: DictConfig):
             wrapper_framework = unique_configs[config_key]
 
     embedding_model = EmbeddingModel(device="cpu")
+    run_start_time = time.time()
 
     if cfg.experiment.scenario == "fishing":
         run_scenario_fishing(
@@ -147,6 +150,20 @@ def main(cfg: DictConfig):
         )
     else:
         raise ValueError(f"Unknown experiment.scenario: {cfg.experiment.scenario}")
+
+    os.makedirs(experiment_storage, exist_ok=True)
+    with open(os.path.join(experiment_storage, "usage.json"), "w") as f:
+        json.dump(
+            {
+                "model": cfg.llm.path,
+                "seed": cfg.seed,
+                "wall_time_s": time.time() - run_start_time,
+                "token_in": logger.token_usage_in,
+                "token_out": logger.token_usage_out,
+            },
+            f,
+            indent=2,
+        )
 
     hydra_log_path = hydra.core.hydra_config.HydraConfig.get().runtime.output_dir
     shutil.copytree(f"{hydra_log_path}/.hydra/", f"{experiment_storage}/.hydra/")

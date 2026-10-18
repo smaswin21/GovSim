@@ -172,3 +172,4 @@ human_evaluation/data
 api_usage/*
 subskills/results/
 .~lock.*
+simulation/results/
