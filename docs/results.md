@@ -106,7 +106,29 @@ Limits: one seed and 4 rounds; the thought contents vary by run. Only the fishin
 
 # Step 3 - pilot model selection
 
-_Not started._
+Goal: default fishery (`fish_baseline_concurrent`), several current models, 5 seeds each; look for models surviving roughly 3-10 of 12 months.
+
+**Done:** `claude-haiku-5-5` (Step 1 above): 12/12 months on all 5 seeds, so it is at ceiling and will not discriminate.
+
+**Tooling (ready):**
+- `scripts/run_model.sh <model> [experiment] ["seeds"] [extra hydra args]` runs all seeds concurrently, writes to `simulation/results/fishing_v7.0/<model>__<experiment>/`, logs to `outputs/pilot_logs/`, and prints the summary table when done.
+- `scripts/aggregate_pilot.py [--group NAME] [--md FILE]` summarizes every finished run: survival months per seed (a run collapses in the first round whose pool after harvesting is below 5 tons; survival = that round + 1, else 12), wall time and tokens. It reproduces the Step 1 table.
+
+**Commands, one model at a time** (needs `ANTHROPIC_API_KEY` in `.env`; each command takes ~40 min for Haiku-class; larger models will be slower and cost more):
+```
+scripts/run_model.sh claude-sonnet-5-5
+scripts/run_model.sh claude-opus-5-5
+scripts/run_model.sh <another-model-id>
+```
+A cheap probe first (1 seed): `scripts/run_model.sh claude-sonnet-5-5 fish_baseline_concurrent "1"`.
+If you hit 429 rate limits, run fewer seeds per call, e.g. `... fish_baseline_concurrent "1 2 3"` then `... "4 5"`.
+Any model id containing "claude" goes through the Anthropic API; open models need a different backend (not set up).
+
+**Summary of all models so far:**
+```
+python -I scripts/aggregate_pilot.py --md docs/pilot_summary.md
+```
+Paste the resulting table here once the models are done.
 
 # Step 4 - harder settings
 
