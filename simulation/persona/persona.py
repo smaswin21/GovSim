@@ -54,7 +54,11 @@ class PersonaAgent:
         self.memory = memory_cls(base_path)
         self.perceive = perceive_cls(model, model_framework)
         self.retrieve = retrieve_cls(
-            model, model_framework, self.memory, embedding_model
+            model,
+            model_framework,
+            self.memory,
+            embedding_model,
+            minimal_memory=self.cfg.get("memory_mode", "full") == "minimal",
         )
         self.store = store_cls(
             model, model_framework, self.memory, embedding_model, self.cfg.store

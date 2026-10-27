@@ -1,3 +1,4 @@
+import collections
 import datetime
 import logging
 import os
@@ -31,12 +32,17 @@ class WandbLogger:
         self.token_usage = 0
         self.token_usage_in = 0
         self.token_usage_out = 0
+        # calls whose output could not be parsed and fell back to default_value
+        self.fallbacks = collections.Counter()
         self.start_time_ms = datetime.datetime.now().timestamp() * 1000
 
         self.global_step = 0
         self.is_finish_pending = False
 
         self.html_logs = {}
+
+    def record_fallback(self, name):
+        self.fallbacks[name] += 1
 
     def get_agent_chain(self, agent_name, phase_name):
         start_time_ms = datetime.datetime.now().timestamp() * 1000

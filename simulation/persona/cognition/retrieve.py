@@ -36,11 +36,13 @@ class RetrieveComponent(Component):
         model_framework: ModelWandbWrapper,
         associative_memory: AssociativeMemory,
         embedding_model: EmbeddingModel,
+        minimal_memory: bool = False,
     ):
         super().__init__(model, model_framework)
         self.associative_memory = associative_memory
 
         self.embedding_model = embedding_model
+        self.minimal_memory = minimal_memory
 
         self.weights = {
             "recency": 0.5,
@@ -112,6 +114,20 @@ class RetrieveComponent(Component):
 
         return result
 
+    @staticmethod
+    def _minimal_nodes(nodes: list[Node]) -> list[Node]:
+        """
+        Minimal-memory condition: keep only always_include nodes (the lake-level
+        events and the agreed-limit thought) and, of the thoughts, only the newest.
+        Free-form reflections and conversation notes are dropped.
+        """
+        kept = [n for n in nodes if n.always_include]
+        thoughts = [n for n in kept if n.type == NodeType.THOUGHT]
+        if thoughts:
+            newest = thoughts[-1]  # nodes are in creation order
+            kept = [n for n in kept if n.type != NodeType.THOUGHT or n is newest]
+        return kept
+
     def _retrieve_dict(
         self, focal_points: list[str], top_k: int
     ) -> dict[str, list[Node]]:
@@ -129,6 +145,8 @@ class RetrieveComponent(Component):
         nodes = self.associative_memory.get_nodes_for_retrieval(
             self.persona.current_time
         )
+        if self.minimal_memory:
+            nodes = self._minimal_nodes(nodes)
 
         recency_scores = self._recency_retrieval(nodes)
         importance_scores = self._importance_retrieval(nodes)

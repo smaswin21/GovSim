@@ -97,6 +97,7 @@ class ModelWandbWrapper:
         if top_p is None:
             top_p = 1.0
 
+        error_message = None
         try:
             lm: Model = previous_lm + pathfinder.gen(
                 name=name,
@@ -112,6 +113,8 @@ class ModelWandbWrapper:
                 f"An exception occured: {e}: {traceback.format_exc()}\nReturning default value in gen",
                 RuntimeWarning,
             )
+            error_message = str(e)
+            self.wanbd_logger.record_fallback(name)
             res = default_value
             lm = previous_lm.set(name, default_value)
         finally:
@@ -129,8 +132,10 @@ class ModelWandbWrapper:
                 end_time_ms=end_time_ms,
                 system_message="TODO",
                 prompt=prompt,
-                status="SUCCESS",
-                status_message=f"valid: {True}",
+                status="SUCCESS" if error_message is None else "ERROR",
+                status_message=(
+                    f"valid: {True}" if error_message is None else error_message
+                ),
                 response_text=res,
                 temperature=temperature,
                 top_p=top_p,
@@ -162,6 +167,7 @@ class ModelWandbWrapper:
         if top_p is None:
             top_p = 1.0
 
+        error_message = None
         try:
             lm: Model = previous_lm + pathfinder.find(
                 name=name,
@@ -177,6 +183,8 @@ class ModelWandbWrapper:
                 f"An exception occured: {e}: {traceback.format_exc()}\nReturning default value in find",
                 RuntimeWarning,
             )
+            error_message = str(e)
+            self.wanbd_logger.record_fallback(name)
             res = default_value
             lm = previous_lm.set(name, default_value)
         finally:
@@ -194,8 +202,10 @@ class ModelWandbWrapper:
                 end_time_ms=end_time_ms,
                 system_message="TODO",
                 prompt=prompt,
-                status="SUCCESS",
-                status_message=f"valid: {True}",
+                status="SUCCESS" if error_message is None else "ERROR",
+                status_message=(
+                    f"valid: {True}" if error_message is None else error_message
+                ),
                 response_text=res,
                 temperature=temperature,
                 top_p=top_p,
@@ -229,6 +239,8 @@ class ModelWandbWrapper:
                 f"An exception occured: {e}: {traceback.format_exc()}\nReturning default value in select",
                 RuntimeWarning,
             )
+            error_message = str(e)
+            self.wanbd_logger.record_fallback(name)
             res = default_value
             lm = previous_lm.set(name, default_value)
         finally:

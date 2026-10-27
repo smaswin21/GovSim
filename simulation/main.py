@@ -165,6 +165,8 @@ def main(cfg: DictConfig):
                 "wall_time_s": time.time() - run_start_time,
                 "token_in": logger.token_usage_in,
                 "token_out": logger.token_usage_out,
+                "fallbacks_total": sum(logger.fallbacks.values()),
+                "fallbacks": dict(logger.fallbacks),
             },
             f,
             indent=2,

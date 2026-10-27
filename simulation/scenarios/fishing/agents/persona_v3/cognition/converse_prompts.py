@@ -32,6 +32,13 @@ def prompt_converse_utterance_in_group(
         init_persona.name, "cognition_converse", "converse_utterance"
     )
 
+    # Only the other participants can speak next (never the Mayor or oneself).
+    names = [t.name for t in target_personas]
+    speaker_options = [n for n in names if n != init_persona.name]
+    # Fallback if the model's answer cannot be parsed: next person in the circle,
+    # so a failure does not always favour the same persona.
+    fallback_speaker = names[(names.index(init_persona.name) + 1) % len(names)]
+
     with user():
         lm += f"{get_sytem_prompt(init_persona)}\n"
         lm += location_time_info(current_location, current_time)
@@ -52,7 +59,9 @@ def prompt_converse_utterance_in_group(
             f"Task: What would you say next in the group chat? "
             "Ensure the conversation flows naturally and avoids repetition. "
             "Determine if your response concludes the conversation. "
-            "If not, identify the next speaker.\n\n"
+            "If not, identify the next speaker. "
+            "The Mayor only reads the monthly report and does not take part; "
+            "choose the next speaker from the fishermen listed in the scenario.\n\n"
         )
         # Define the format for the output
         REPONSE = "Response: "
@@ -62,7 +71,7 @@ def prompt_converse_utterance_in_group(
         lm += "Output format:\n"
         lm += REPONSE + "[fill in]\n"
         lm += ANSWER_STOP + "[yes/no]\n"
-        lm += NEXT_SPEAKER + "[fill in]\n"
+        lm += NEXT_SPEAKER + f"[one of: {', '.join(speaker_options)}]\n"
     with assistant():
         lm += REPONSE
         lm = model.gen(
@@ -88,14 +97,13 @@ def prompt_converse_utterance_in_group(
         else:
             lm += "\n"
             lm += NEXT_SPEAKER
-            options = [t.name for t in target_personas]
             lm = model.select(
                 lm,
                 name="next_speaker",
-                options=options,
-                default_value=options[0],
+                options=speaker_options,
+                default_value=fallback_speaker,
             )
-            assert lm["next_speaker"] in options
+            assert lm["next_speaker"] in speaker_options
             next_speaker = lm["next_speaker"]
 
     model.end_chain(init_persona.name, lm)

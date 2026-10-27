@@ -41,8 +41,8 @@ def main():
         g for g in glob.glob(os.path.join(args.results, "*"))
         if os.path.isdir(g) and (args.group is None or os.path.basename(g) == args.group)
     )
-    lines = ["| group | model | runs | survival months (per seed) | mean | collapsed | wall min/run | tokens in / out per run |",
-             "|---|---|---|---|---|---|---|---|"]
+    lines = ["| group | model | runs | survival months (per seed) | mean | collapsed | wall min/run | tokens in / out per run | fallbacks/run |",
+             "|---|---|---|---|---|---|---|---|---|"]
     for g in groups:
         recs = []
         for run in sorted(glob.glob(os.path.join(g, "*"))):
@@ -62,10 +62,13 @@ def main():
         wall = statistics.mean(r[3]["wall_time_s"] for r in recs) / 60
         tin = statistics.mean(r[3]["token_in"] for r in recs)
         tout = statistics.mean(r[3]["token_out"] for r in recs)
+        # swallowed parse failures; "n/a" for runs made before this was logged
+        fb = [r[3].get("fallbacks_total") for r in recs]
+        fallbacks = "n/a" if None in fb else f"{statistics.mean(fb):.1f}"
         lines.append(
             f"| {os.path.basename(g)} | {recs[0][3]['model']} | {len(recs)} | {per_seed} | "
             f"{statistics.mean(months):.1f} | {sum(r[2] for r in recs)}/{len(recs)} | "
-            f"{wall:.1f} | {tin/1e6:.2f}M / {tout/1e6:.2f}M |"
+            f"{wall:.1f} | {tin/1e6:.2f}M / {tout/1e6:.2f}M | {fallbacks} |"
         )
     out = "\n".join(lines)
     print(out)
