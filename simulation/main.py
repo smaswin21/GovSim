@@ -157,11 +157,14 @@ def main(cfg: DictConfig):
     # every prompt/response rendered as HTML, per agent (chain name in <h3>)
     with open(os.path.join(experiment_storage, "prompts.json"), "w") as f:
         json.dump(logger.html_logs, f)
+    with open(os.path.join(experiment_storage, "calls.json"), "w") as f:
+        json.dump(logger.calls, f)
     with open(os.path.join(experiment_storage, "usage.json"), "w") as f:
         json.dump(
             {
                 "model": cfg.llm.path,
                 "seed": cfg.seed,
+                "num_ctx": int(os.getenv("OLLAMA_NUM_CTX", "0")) or None,
                 "wall_time_s": time.time() - run_start_time,
                 "token_in": logger.token_usage_in,
                 "token_out": logger.token_usage_out,

@@ -173,3 +173,4 @@ api_usage/*
 subskills/results/
 .~lock.*
 simulation/results/
+.DS_Store

@@ -213,9 +213,11 @@ class ConcurrentEnv:
             "num_agents": float(self.cfg.num_agents),
             "resource_in_pool": self.cfg.initial_resource_in_pool,
             "resource_before_harvesting": self.cfg.initial_resource_in_pool,
-            "sustainability_threshold": (
-                10
-            ),  # each day the fish double and cap at 100, so maximum 50 can be fished
+            # the pool doubles and caps at its initial size, so at most half can be
+            # taken; fair share = half / agents (10 for 5 agents, 12 for 4)
+            "sustainability_threshold": int(
+                (self.cfg.initial_resource_in_pool // 2) // self.cfg.num_agents
+            ),
             "collected_resource": {},
             "wanted_resource": {},
             "last_collected_resource": {},

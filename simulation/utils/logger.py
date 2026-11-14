@@ -40,6 +40,9 @@ class WandbLogger:
         self.is_finish_pending = False
 
         self.html_logs = {}
+        # one record per LLM call (kept on disk as calls.json, wandb is off in debug)
+        self.calls = []
+        self.current_round = None
 
     def record_fallback(self, name):
         self.fallbacks[name] += 1
@@ -141,6 +144,19 @@ class WandbLogger:
                 "default_value": default_value,
             },
             outputs={"response": response_text},
+        )
+        self.calls.append(
+            {
+                "round": self.current_round,
+                "agent": self.current_agent_name,
+                "phase": self.current_phase_name,
+                "name": name,
+                "token_in": token_usage_in,
+                "token_out": token_usage_out,
+                "start_ms": start_time_ms,
+                "end_ms": end_time_ms,
+                "error": status == "ERROR",
+            }
         )
         token_usage = token_usage_in + token_usage_out
         self.token_usage_in += token_usage_in

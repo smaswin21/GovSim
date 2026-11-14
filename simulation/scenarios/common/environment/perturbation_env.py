@@ -144,6 +144,9 @@ class PerturbationEnv(ConcurrentEnv):
                         )
                     elif self.perturbation.type == "insert_outsider":
                         self.agents = self.possible_agents
+                        self.internal_global_state["num_agents"] = float(
+                            len(self.agents)
+                        )
                         self._agent_selector = agent_selector(self.agents)
                         self._init_agent(self.agents[-1])
 
@@ -196,6 +199,7 @@ class PerturbationEnv(ConcurrentEnv):
                 self.phase = self._phase_selector.next()
             elif self.perturbation.type == "insert_outsider":
                 self.agents = self.possible_agents
+                self.internal_global_state["num_agents"] = float(len(self.agents))
                 self._agent_selector = agent_selector(self.agents)
                 self._init_agent(self.agents[-1])
                 self.agent_selection = self._agent_selector.next()

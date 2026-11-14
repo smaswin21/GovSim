@@ -82,9 +82,13 @@ def run(
         env = FishingConcurrentEnv(cfg.env, experiment_storage, agent_id_to_name)
     else:
         raise ValueError(f"Unknown environment class: {cfg.env.class_name}")
+    # Prompts describe whoever is currently in the simulation (e.g. 4 fishermen
+    # until the outsider joins, then 5); env.agents is the live list.
+    cognition_utils.ACTIVE_NAMES = lambda: [agent_id_to_name[a] for a in env.agents]
     agent_id, obs = env.reset()
 
     while True:
+        logger.current_round = env.num_round
         agent = personas[agent_id]
         action = agent.loop(obs)
 

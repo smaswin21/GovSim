@@ -1,0 +1,103 @@
+--- a/pathfinder/api.py
++++ b/pathfinder/api.py
+@@ -86,6 +86,15 @@
+         raise NotImplementedError
+ 
+     def run_find(self, lm, r, name):
++        if lm.text_to_consume == "" and getattr(self, "last_truncated", False):
++            # The generation before this find was cut off at the token limit, so
++            # the model never gave a final answer. Do not ask again and take the
++            # first number from unfinished reasoning; fail so the caller falls
++            # back to its default value (counted as a fallback).
++            self.last_truncated = False
++            raise Exception(
++                "previous generation hit the token limit before a final answer"
++            )
+         if lm.text_to_consume == "":
+             tmp_chat = (
+                 lm.chat[:-1]
+@@ -232,6 +241,64 @@
+         )
+         logging.info(f"OpenAI system_fingerprint: {out.system_fingerprint}")
+         return out.choices[0].message.content
++
++
++class OllamaAPI(ModelAPI):
++    """Local Ollama server through its native /api/chat endpoint.
++
++    The OpenAI-compatible /v1 endpoint ignores options.num_ctx, so the context window
++    would stay at Ollama's small default and long prompts get truncated silently.
++    Thinking is turned off (reasoning models otherwise spend max_tokens on it and
++    return empty text). Token counts are Ollama's prompt_eval_count / eval_count.
++
++    Env: OLLAMA_HOST (default http://localhost:11434), OLLAMA_NUM_CTX (default 16384).
++    """
++
++    def __init__(self, model_name, seed):
++        super().__init__(model_name, seed)
++        from os import getenv
++
++        host = getenv("OLLAMA_HOST", "http://localhost:11434").rstrip("/")
++        if not host.startswith("http"):
++            host = "http://" + host
++        self.url = f"{host}/api/chat"
++        self.num_ctx = int(getenv("OLLAMA_NUM_CTX", "16384"))
++
++    def request_api(self, chat, tmeperature, top_p, max_tokens):
++        import httpx
++
++        # the local server can be down for a while (model reload, app restart)
++        @backoff.on_exception(
++            backoff.expo,
++            (httpx.TransportError,),
++            max_time=300,
++            max_value=30,
++        )
++        def post(payload):
++            r = httpx.post(self.url, json=payload, timeout=600)
++            r.raise_for_status()
++            return r.json()
++
++        out = post(
++            {
++                "model": self.model_name,
++                "messages": chat,
++                "stream": False,
++                "think": False,
++                "options": {
++                    "temperature": tmeperature,
++                    "top_p": top_p,
++                    "seed": self.seed,
++                    "num_ctx": self.num_ctx,
++                    "num_predict": min(max_tokens, 4096),
++                },
++            }
++        )
++        self.token_in = out.get("prompt_eval_count", 0)
++        self.token_out = out.get("eval_count", 0)
++        # "length" = stopped at num_predict, i.e. the answer may be unfinished
++        self.last_truncated = out.get("done_reason") == "length"
++        return out["message"]["content"]
+ 
+ 
+ import json
+--- a/pathfinder/loader.py
++++ b/pathfinder/loader.py
+@@ -1,7 +1,7 @@
+ import torch
+ from transformers import AutoConfig, AutoModelForCausalLM, AutoTokenizer
+ 
+-from .api import AnthropicAPI, AzureOpenAIAPI, MistralAPI, OpenAIAPI, OpenRouter
++from .api import AnthropicAPI, AzureOpenAIAPI, MistralAPI, OllamaAPI, OpenAIAPI, OpenRouter
+ from .chat import (
+     ChatML,
+     Cohere,
+@@ -19,6 +19,8 @@
+ 
+ 
+ def get_api_model(name, seed):
++    if name.lower().startswith("ollama-"):
++        return OllamaAPI(name[len("ollama-") :], seed)
+     if "z-gpt" in name.lower():
+         return AzureOpenAIAPI(name, seed)
+     if "gpt" in name.lower():
